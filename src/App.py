@@ -21,15 +21,22 @@ def toggle_client_visibility(root, icon):
     global is_client_hidden, window_handle, window_title
     pattern = re.compile(r'\b\w{12}\b', re.UNICODE)
 
-    if window_handle is None:
-        logging.debug("Searching for window with 12-character title...")
-        for window in gw.getAllWindows():
-            logging.debug(f"Checking window: {window.title}")
-            if pattern.fullmatch(window.title):
-                window_handle = window._hWnd
-                window_title = window.title
-                logging.info(f"Window detected: {window.title}")
-                break
+    def enum_window_callback(hwnd, _):
+        title = win32gui.GetWindowText(hwnd)
+        logging.debug(f"Checking window: {title}")
+        if pattern.fullmatch(title):
+            global window_handle, window_title
+            window_handle = hwnd
+            window_title = title
+            logging.info(f"Window detected: {title}")
+            return False  # Stop enumeration
+        return True  # Continue enumeration
+
+    # Always search for the window to handle randomized titles
+    logging.debug("Searching for window with 12-character title...")
+    window_handle = None
+    window_title = None
+    win32gui.EnumWindows(enum_window_callback, None)
 
     if window_handle:
         if is_client_hidden:
